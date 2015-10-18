@@ -260,11 +260,7 @@ radius: 1.35, stop: 0 #fff, stop: 1 #ddd);
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <item>
-            <widget class="QLabel" name="infoLabel">
-             <property name="text">
-              <string/>
-             </property>
-            </widget>
+            <widget class="QTableView" name="EventTableView"/>
            </item>
           </layout>
          </widget>
@@ -277,53 +273,7 @@ radius: 1.35, stop: 0 #fff, stop: 1 #ddd);
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <item>
-         <widget class="QGroupBox" name="groupBoxTemp">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">#groupBoxTemp {
-	border: none;
-	background: #626262;
-	font: 75 18pt &quot;MS Shell Dlg 2&quot;;
-}
-#groupBoxTemp QLabel{
-	font: 75 18pt &quot;MS Shell Dlg 2&quot;;
-}</string>
-          </property>
-          <property name="title">
-           <string/>
-          </property>
-          <layout class="QGridLayout" name="gridLayout_5">
-           <property name="topMargin">
-            <number>30</number>
-           </property>
-           <item row="0" column="2">
-            <widget class="Line" name="line_3">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="Line" name="line_2">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="Line" name="line">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
+         <widget class="QTableView" name="tempTableView"/>
         </item>
        </layout>
       </widget>

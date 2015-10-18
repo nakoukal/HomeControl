@@ -12,6 +12,7 @@
 #include <QStandardPaths>
 #include <QList>
 #include <QListIterator>
+#include <QStandardItemModel>
 #include "downloader.h"
 
 namespace Ui {
@@ -39,28 +40,31 @@ public:
     QTimer *timer;
 private:
     Ui::HomeControl *ui;
+    QUrl _url;
+    QString _button1Name,_button2Name,_button3Name,_iniFileName,_deviceName,_hostName,_port;
+    QString _style_gray,_style_red,_button1Bit,_button2Bit,_button3Bit;
+    int _refreshtime;
+    QList<ButtonInfo> *_buttonSetting;
+    ButtonInfo findButton(QString name);
+    QStandardItemModel *model;
     void loadTemperatures();
+    void loadEvents();
     void loadBitState();
     void loadGraph_A();
     void loadHomeTempImage();
     void loadSettings();
     void saveSettings();
-    int _refreshtime;
-    QUrl _url;
-    QString _button1Name,_button2Name,_button3Name,_iniFileName,_deviceName,_hostName,_port,_button1Bit,_button2Bit,_button3Bit;
-    QList<ButtonInfo> *_buttonSetting;
-    bool setButtonValue(int bit,int value);
-    ButtonInfo findButton(QString name);
+    void showDeviceInfo();
     void SetButtonState(QPushButton *btn, int val);
-    QString _style_gray,_style_red;
 
+    bool setButtonValue(int bit,int value);
 
 public slots:
-    void InsertItemsSlot(QJsonObject jsonObject);
+    void loadTempSlot(QJsonObject jsonObject);
+    void loadEventsSlot(QJsonObject jsonObject);
     void initButtonSlot(QJsonObject jsonObject);
     void SetPixmapslot(QPixmap pixmap);
     void MyTimerSlot();
-
 
 private slots:    
     void SetButton1TextSlot(QString text);

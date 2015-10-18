@@ -2,24 +2,33 @@
 #include "ui_homecontrol.h"
 
 
-
+/**
+ * @brief HomeControl::HomeControl
+ * @param parent
+ * Home control constructor set up all variables and set all connections to slots
+ */
 HomeControl::HomeControl(QWidget *parent) : QMainWindow(parent), ui(new Ui::HomeControl)
 {
     ui->setupUi(this);
+
+    //list of button status and names from db
     _buttonSetting = new QList<ButtonInfo>();
+
+    //sett color of button in pressing
     _style_gray = QString("background: qradialgradient(cx: 0.3, cy: -0.4,fx: 0.3, fy: -0.4,radius: 1.35, stop: 0 #FFF, stop: 1 #888);");
     _style_red = QString("background: qradialgradient(cx: 0.3, cy: -0.4,fx: 0.3, fy: -0.4,radius: 1.35, stop: 0 #FF0000, stop: 1 #630000);");
 
-    //set the writable path for ini
+    //set the writable save path for ini
     QString path = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) ;
     _iniFileName = path + "/seting.ini";
 
-    // create a timer
+    // create a timer object
     timer = new QTimer(this);
 
-    // setup signal and slot
+    // setup signal and slot for timer
     connect(timer, SIGNAL(timeout()),this, SLOT(MyTimerSlot()));
 
+    //set signel and slot for button name
     connect(ui->Btn1NameLineEdit, SIGNAL(textChanged(QString)),this,SLOT(SetButton1TextSlot(QString)));
     connect(ui->Btn2NameLineEdit, SIGNAL(textChanged(QString)),this,SLOT(SetButton2TextSlot(QString)));
     connect(ui->Btn3NameLineEdit, SIGNAL(textChanged(QString)),this,SLOT(SetButton3TextSlot(QString)));
@@ -27,25 +36,30 @@ HomeControl::HomeControl(QWidget *parent) : QMainWindow(parent), ui(new Ui::Home
     connect(ui->Btn5NameLineEdit, SIGNAL(textChanged(QString)),this,SLOT(SetButton5TextSlot(QString)));
     connect(ui->Btn6NameLineEdit, SIGNAL(textChanged(QString)),this,SLOT(SetButton6TextSlot(QString)));
 
+    //check if ini file exist and load settings
     if(QFile::exists(_iniFileName))
         loadSettings();
 
-
+    //start load button info
     this->loadBitState();
+
+    //start load temperature from db
+    this->loadTemperatures();
+
+    //start load graph with temperature
+    this->loadGraph_A();
+
+    //start load img with home temperature
+    this->loadHomeTempImage();
+
+    //show device info
+    //this->showDeviceInfo();
+
+    //show event info table
+    this->loadEvents();
 
     // start timer with refreshing
     timer->start(60000);
-
-    QString info = "Product: "+QSysInfo::prettyProductName();
-    info += "\n";
-    info += "CPU Arch.: "+QSysInfo::buildCpuArchitecture();
-    info += "\n";
-    info += "Kernel Type: "+QSysInfo::kernelType();
-    info += "\n";
-    info += "Kernel Ver: "+QSysInfo::kernelVersion();
-
-    ui->infoLabel->setText(info);
-
 
 }
 
@@ -60,10 +74,26 @@ HomeControl::~HomeControl()
  */
 void HomeControl::MyTimerSlot()
 {
-    //this->loadTemperatures();
+    //start load button info
     this->loadBitState();
+
+    //start load temperature from db
+    this->loadTemperatures();
+
+    //start load graph with temperature
+    this->loadGraph_A();
+
+    //start load img with home temperature
+    this->loadHomeTempImage();
+
+    //show event info table
+    this->loadEvents();
 }
 
+/**
+ * @brief HomeControl::loadBitState
+ * Function load from url json gpio state and after finished call slot
+ */
 void HomeControl::loadBitState()
 {
     Downloader* down = new Downloader();
@@ -72,6 +102,11 @@ void HomeControl::loadBitState()
     connect(down, SIGNAL(gpioStateChanged(QJsonObject)), this, SLOT(initButtonSlot(QJsonObject)));
 }
 
+/**
+ * @brief HomeControl::initButtonSlot
+ * @param jsonObject
+ * Fuction of the gpio pins and add to list
+ */
 void HomeControl::initButtonSlot(QJsonObject jsonObject)
 {
     QJsonArray jsonArray = jsonObject["state"].toArray();
@@ -84,7 +119,6 @@ void HomeControl::initButtonSlot(QJsonObject jsonObject)
     }
     ButtonInfo info = this->findButton("button1");
     this->SetButtonState(ui->pushButton1,info.parameter.value);
-    this->loadTemperatures();
 }
 
 void HomeControl::loadTemperatures()
@@ -92,7 +126,7 @@ void HomeControl::loadTemperatures()
     Downloader* down = new Downloader();
     _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/actualTemp.php");
     down->doDownloadTemperature(_url);
-    connect(down, SIGNAL(tempChanged(QJsonObject)), this, SLOT(InsertItemsSlot(QJsonObject)));
+    connect(down, SIGNAL(tempChanged(QJsonObject)), this, SLOT(loadTempSlot(QJsonObject)));
 }
 
 /**
@@ -100,32 +134,87 @@ void HomeControl::loadTemperatures()
  * @param Lists
  * Slot to inserts lines to combobox
  */
-void HomeControl::InsertItemsSlot(QJsonObject jsonObject)
+void HomeControl::loadTempSlot(QJsonObject jsonObject)
 {
-    ui->groupBoxTemp->size();
-    QLayoutItem* item;
-        while ( ( item = ui->groupBoxTemp->layout()->takeAt( 0 ) ) != NULL )
-        {
-            delete item->widget();
-            delete item;
-        }
+
     QJsonArray jsonArray = jsonObject["temp"].toArray();
+    int rows = jsonArray.count();
+    int row = 0;
+    QStandardItemModel *model = new QStandardItemModel(rows,3,this); //2 Rows and 3 Columns
+    model->setHorizontalHeaderItem(0, new QStandardItem(QString("name")));
+    model->setHorizontalHeaderItem(1, new QStandardItem(QString("act")));
+    model->setHorizontalHeaderItem(2, new QStandardItem(QString("req")));
+
     foreach (const QJsonValue & value, jsonArray)
     {
-        QJsonObject obj = value.toObject();
-        QString name = obj["name"].toString();
-        QString act_value = obj["act"].toString();
-        QString req_value = obj["req"].toString();
-        QLabel *lab_name  = new QLabel(name);
-        QLabel *lab_act  = new QLabel(act_value);
-        QLabel *lab_req  = new QLabel(req_value);
 
-        ui->groupBoxTemp->layout()->addWidget(lab_name);
-        ui->groupBoxTemp->layout()->addWidget(lab_act);
-        ui->groupBoxTemp->layout()->addWidget(lab_req);
+        QJsonObject obj = value.toObject();
+
+        QStandardItem* itemName = new QStandardItem(obj["name"].toString());
+        QStandardItem* itemAct = new QStandardItem(obj["act"].toString());
+        QStandardItem* itemReq = new QStandardItem(obj["req"].toString());
+
+        model->setItem(row, 0, itemName);
+        model->setItem(row, 1, itemAct);
+        model->setItem(row, 2, itemReq);
+
+        row++;
     }
 
-    this->loadGraph_A();
+
+
+    ui->tempTableView->setModel(model);
+}
+
+void HomeControl::loadEvents()
+{
+    Downloader* down = new Downloader();
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?act=readallevents");
+    down->doDownloadTemperature(_url);
+    connect(down, SIGNAL(tempChanged(QJsonObject)), this, SLOT(loadEventsSlot(QJsonObject)));
+}
+
+/**
+ * @brief MainWindow::InserItemsSlot
+ * @param Lists
+ * Slot to inserts lines to combobox
+ */
+void HomeControl::loadEventsSlot(QJsonObject jsonObject)
+{
+
+    QJsonArray jsonArray = jsonObject["event"].toArray();
+    int rows = jsonArray.count();
+    int row = 0;
+    QStandardItemModel *model = new QStandardItemModel(rows,5,this); //2 Rows and 3 Columns
+    model->setHorizontalHeaderItem(0, new QStandardItem(QString("timestamp")));
+    model->setHorizontalHeaderItem(1, new QStandardItem(QString("ip")));
+    model->setHorizontalHeaderItem(2, new QStandardItem(QString("device")));
+    model->setHorizontalHeaderItem(3, new QStandardItem(QString("bit")));
+    model->setHorizontalHeaderItem(4, new QStandardItem(QString("val")));
+
+    foreach (const QJsonValue & value, jsonArray)
+    {
+
+        QJsonObject obj = value.toObject();
+
+        QStandardItem* itemTime = new QStandardItem(obj["timestamp"].toString());
+        QStandardItem* itemIp = new QStandardItem(obj["ip"].toString());
+        QStandardItem* itemDev = new QStandardItem(obj["device"].toString());
+        QStandardItem* itemBit = new QStandardItem(obj["bit"].toString());
+        QStandardItem* itemVal = new QStandardItem(obj["value"].toString());
+
+        model->setItem(row, 0, itemTime);
+        model->setItem(row, 1, itemIp);
+        model->setItem(row, 2, itemDev);
+        model->setItem(row, 3, itemBit);
+        model->setItem(row, 4, itemVal);
+
+        row++;
+    }
+
+
+
+    ui->EventTableView->setModel(model);
 }
 
 /**
@@ -143,7 +232,6 @@ void HomeControl::loadGraph_A()
 void HomeControl::SetPixmapslot(QPixmap pixmap)
 {
     ui->graphDayLabel->setPixmap(pixmap);
-    this->loadHomeTempImage();
 }
 
 
@@ -434,4 +522,17 @@ void HomeControl::SetButtonState(QPushButton *btn, int val)
          btn->setStyleSheet(_style_gray);
     }
 
+}
+
+void HomeControl::showDeviceInfo()
+{
+    QString info = "Product: "+QSysInfo::prettyProductName();
+    info += "\n";
+    info += "CPU Arch.: "+QSysInfo::buildCpuArchitecture();
+    info += "\n";
+    info += "Kernel Type: "+QSysInfo::kernelType();
+    info += "\n";
+    info += "Kernel Ver: "+QSysInfo::kernelVersion();
+
+    //ui->infoLabel->setText(info);
 }
