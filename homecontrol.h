@@ -77,6 +77,9 @@ private slots:
     void on_pushButton1_released();
     void on_pushButton2_released();
     void on_pushButton3_released();
+    void on_pushButton4_released();
+    void on_pushButton5_released();
+    void on_pushButton6_released();
 };
 
 #endif // HOMECONTROL_H

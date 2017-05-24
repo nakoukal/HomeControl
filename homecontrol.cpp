@@ -9,8 +9,7 @@
  */
 HomeControl::HomeControl(QWidget *parent) : QMainWindow(parent), ui(new Ui::HomeControl)
 {
-    ui->setupUi(this);
-
+    ui->setupUi(this);    
     //list of button status and names from db
     _buttonSetting = new QList<ButtonInfo>();
 
@@ -59,7 +58,7 @@ HomeControl::HomeControl(QWidget *parent) : QMainWindow(parent), ui(new Ui::Home
     this->loadEvents();
 
     // start timer with refreshing
-    timer->start(60000);
+    timer->start(10000);
 
 }
 
@@ -117,14 +116,32 @@ void HomeControl::initButtonSlot(QJsonObject jsonObject)
         int bit = obj["bit"].toInt();
         this->setButtonValue(bit,val);
     }
-    ButtonInfo info = this->findButton("button1");
+    ButtonInfo info;
+
+    info = this->findButton("button1");
     this->SetButtonState(ui->pushButton1,info.parameter.value);
+
+    info = this->findButton("button2");
+    this->SetButtonState(ui->pushButton2,info.parameter.value);
+
+    info = this->findButton("button3");
+    this->SetButtonState(ui->pushButton3,info.parameter.value);
+
+    info = this->findButton("button4");
+    this->SetButtonState(ui->pushButton4,info.parameter.value);
+
+    info = this->findButton("button5");
+    this->SetButtonState(ui->pushButton5,info.parameter.value);
+
+    info = this->findButton("button6");
+    this->SetButtonState(ui->pushButton6,info.parameter.value);
+
 }
 
 void HomeControl::loadTemperatures()
 {
     Downloader* down = new Downloader();
-    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/actualTemp.php");
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/actualTemp2.php");
     down->doDownloadTemperature(_url);
     connect(down, SIGNAL(tempChanged(QJsonObject)), this, SLOT(loadTempSlot(QJsonObject)));
 }
@@ -144,6 +161,7 @@ void HomeControl::loadTempSlot(QJsonObject jsonObject)
     model->setHorizontalHeaderItem(0, new QStandardItem(QString("name")));
     model->setHorizontalHeaderItem(1, new QStandardItem(QString("act")));
     model->setHorizontalHeaderItem(2, new QStandardItem(QString("req")));
+    model->setHorizontalHeaderItem(3, new QStandardItem(QString("sens")));
 
     foreach (const QJsonValue & value, jsonArray)
     {
@@ -153,17 +171,19 @@ void HomeControl::loadTempSlot(QJsonObject jsonObject)
         QStandardItem* itemName = new QStandardItem(obj["name"].toString());
         QStandardItem* itemAct = new QStandardItem(obj["act"].toString());
         QStandardItem* itemReq = new QStandardItem(obj["req"].toString());
+        QStandardItem* itemSens = new QStandardItem(obj["sens"].toString());
 
         model->setItem(row, 0, itemName);
         model->setItem(row, 1, itemAct);
         model->setItem(row, 2, itemReq);
+        model->setItem(row, 3, itemSens);
 
         row++;
     }
 
 
 
-    ui->tempTableView->setModel(model);
+    ui->EventTableView->setModel(model);
 }
 
 void HomeControl::loadEvents()
@@ -186,7 +206,7 @@ void HomeControl::loadEventsSlot(QJsonObject jsonObject)
     int rows = jsonArray.count();
     int row = 0;
     QStandardItemModel *model = new QStandardItemModel(rows,5,this); //2 Rows and 3 Columns
-    model->setHorizontalHeaderItem(0, new QStandardItem(QString("timestamp")));
+    model->setHorizontalHeaderItem(0, new QStandardItem(QString("time")));
     model->setHorizontalHeaderItem(1, new QStandardItem(QString("ip")));
     model->setHorizontalHeaderItem(2, new QStandardItem(QString("device")));
     model->setHorizontalHeaderItem(3, new QStandardItem(QString("bit")));
@@ -197,7 +217,7 @@ void HomeControl::loadEventsSlot(QJsonObject jsonObject)
 
         QJsonObject obj = value.toObject();
 
-        QStandardItem* itemTime = new QStandardItem(obj["timestamp"].toString());
+        QStandardItem* itemTime = new QStandardItem(obj["time"].toString());
         QStandardItem* itemIp = new QStandardItem(obj["ip"].toString());
         QStandardItem* itemDev = new QStandardItem(obj["device"].toString());
         QStandardItem* itemBit = new QStandardItem(obj["bit"].toString());
@@ -214,7 +234,11 @@ void HomeControl::loadEventsSlot(QJsonObject jsonObject)
 
 
 
-    ui->EventTableView->setModel(model);
+    ui->tempTableView->setModel(model);
+    //ui->EventTableView->horizontalHeader()->setStyleSheet("QHeaderView { font-size: 10pt; }");
+    ui->tempTableView->setStyleSheet("QHeaderView {font-size: 10pt;font-weight:bold }");
+    ui->tempTableView->setStyleSheet("QTableView {font-size: 10pt; }");
+    ui->tempTableView->resizeColumnsToContents();
 }
 
 /**
@@ -224,7 +248,8 @@ void HomeControl::loadEventsSlot(QJsonObject jsonObject)
 void HomeControl::loadGraph_A()
 {
     Downloader* down = new Downloader();
-    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/avg_temp_graph.php?type=day&nadpis=Teploty_za_24hod.");
+    //_url.setUrl("http://"+_hostName+":"+_port+"/smarthome/avg_temp_graph.php?type=day&nadpis=Teploty_za_24hod.");
+    _url.setUrl("http://"+_hostName+":90/picture/1/current/");
     down->doDownloadGraph(_url);
     connect(down, SIGNAL(pixmapChanged(QPixmap)), this , SLOT(SetPixmapslot(QPixmap)));
 }
@@ -447,7 +472,7 @@ void HomeControl::on_pushButton1_released()
     ButtonInfo info = this->findButton("button1");
     int bit = info.parameter.bit;
     Downloader* down = new Downloader();
-    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=writevalue&bit="+QString::number(bit));
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=opengate&bit="+QString::number(bit));
     down->doWriteBit(_url);
     connect(down, SIGNAL(bitwrited(QString)), ui->pushButton1, SLOT(setStyleSheet(QString)));
 }
@@ -469,9 +494,42 @@ void HomeControl::on_pushButton3_released()
     ButtonInfo info = this->findButton("button3");
     int bit = info.parameter.bit;
     Downloader* down = new Downloader();
-    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=opengate&bit="+QString::number(bit));//17
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=writevalue&bit="+QString::number(bit));//17
     down->doWriteBit(_url);
     connect(down, SIGNAL(bitwrited(QString)), ui->pushButton3, SLOT(setStyleSheet(QString)));
+}
+
+void HomeControl::on_pushButton4_released()
+{
+    ui->pushButton4->setStyleSheet(_style_red);
+    ButtonInfo info = this->findButton("button4");
+    int bit = info.parameter.bit;
+    Downloader* down = new Downloader();
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=writevalue&bit="+QString::number(bit));//17
+    down->doWriteBit(_url);
+    connect(down, SIGNAL(bitwrited(QString)), ui->pushButton4, SLOT(setStyleSheet(QString)));
+}
+
+void HomeControl::on_pushButton5_released()
+{
+    ui->pushButton5->setStyleSheet(_style_red);
+    ButtonInfo info = this->findButton("button5");
+    int bit = info.parameter.bit;
+    Downloader* down = new Downloader();
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=writevalue&bit="+QString::number(bit));//17
+    down->doWriteBit(_url);
+    connect(down, SIGNAL(bitwrited(QString)), ui->pushButton5, SLOT(setStyleSheet(QString)));
+}
+
+void HomeControl::on_pushButton6_released()
+{
+    ui->pushButton6->setStyleSheet(_style_red);
+    ButtonInfo info = this->findButton("button6");
+    int bit = info.parameter.bit;
+    Downloader* down = new Downloader();
+    _url.setUrl("http://"+_hostName+":"+_port+"/smarthome/gpio_control.php?dev="+_deviceName+"&act=writevalue&bit="+QString::number(bit));//17
+    down->doWriteBit(_url);
+    connect(down, SIGNAL(bitwrited(QString)), ui->pushButton6, SLOT(setStyleSheet(QString)));
 }
 /**
  * Function find relevant item in list and sets valus

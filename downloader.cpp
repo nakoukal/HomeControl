@@ -81,17 +81,19 @@ void Downloader::doDownloadGraph(QUrl url)
     _manager->get(QNetworkRequest(url));
 }
 
+
 void Downloader::slot_replyGraph(QNetworkReply *reply)
 {
     if (reply->error() != QNetworkReply::NoError) {
         qDebug() << reply->errorString();
-        return;
     }
-
-    QByteArray pngData = reply->readAll();
-    QPixmap pixmap;
-    pixmap.loadFromData(pngData);
-    emitGraphSignal(pixmap);
+    else
+    {
+        QByteArray pngData = reply->readAll();
+        QPixmap pixmap;
+        pixmap.loadFromData(pngData);
+        emitGraphSignal(pixmap);
+    }
 
     reply->deleteLater();
 }
